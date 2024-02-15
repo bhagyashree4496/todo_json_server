@@ -1,0 +1,8 @@
+h1 {
+  /* background-image: linear-gradient(to right, #pt7205 , #pt7221,#pt7225); */
+  background-image: linear-gradient(135deg, #8bc6ec 50%, #9599e2 53%);
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: inline-block;
+}

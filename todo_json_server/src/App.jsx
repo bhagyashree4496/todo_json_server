@@ -1,68 +1,109 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import "./App.css";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 
 import AddTask from "./AddTask";
 import EditTask from "./EditTask";
+//import { useQuery } from "@tanstack/react-query";
 
 function App() {
-  const [tasks, setTasks] = useState([
-    { id: uuidv4(), task: "finish header section", completed: true },
-  ]);
+  const queryClient = useQueryClient();
+  const fetchData = async () => {
+    let response = await axios.get("http://localhost:3000/tasks");
+    return response.data;
+  };
+  let { isPending, isError, data, error } = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchData,
+    staleTime: 0,
+    // refetchInterval: 10000,
+    // refetchOnMount: false,
+    refetchOnWindowFocus: true,
+  });
+
+  //
+  // const [tasks, setTasks] = useState([
+  //   { id: uuidv4(), task: "finish header section", completed: true },
+  // ]);
+  //
   const [openModal, setOpenModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  //
   const [Id, setId] = useState(null);
+  //
   const date = new Date();
   console.log(date);
   const today = String(date).slice(0, 15);
   console.log(today);
-
-  const deleteTask = (id) => {
-    axios.delete(`http://localhost:3000/tasks/${id}`).then((res) => {
-      console.log(res.data);
-      const temp = tasks.filter((task) => {
-        return task.id !== id;
-      });
-      console.log(temp);
-      setTasks(temp);
-    });
+  //
+  const deleteTask = async (id) => {
+    axios.delete(`http://localhost:3000/tasks/${id}`);
   };
-  useEffect(() => {
-    axios
-      .get("http://localhost:3000/tasks")
-      .then((res) => {
-        setTasks(res.data);
-        console.log(res.data, "response");
-      })
-      .catch((err) => {
-        console.log("error!!!", err);
-      });
-  }, []);
+  const mutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: () => {
+      return queryClient.invalidateQueries({ queryKey: ["todos"] });
+    },
+  });
+
+  // const deleteTask = (id) => {
+  //   axios.delete(`http://localhost:3000/tasks/${id}`).then((res) => {
+  //     console.log(res.data);
+  //     const temp = tasks.filter((task) => {
+  //       return task.id !== id;
+  //     });
+  //     console.log(temp);
+  //     setTasks(temp);
+  //   });
+  // };
+  //
+
+  // useEffect(() => {
+  //   fetchData();
+  //   axios
+  //     .get("http://localhost:3000/tasks")
+  //     .then((res) => {
+  //       setTasks(res.data);
+  //       console.log(res.data, "response");
+  //     })
+  //     .catch((err) => {
+  //       console.log("error!!!", err);
+  //     });
+  // }, []);
+  if (isPending) {
+    return <h3>fetching</h3>;
+  }
+  if (isError) {
+    return <h3>Error:{error.message}</h3>;
+  }
 
   return (
-    <div className="w-full h-screen p-[10px] py-[50px] md:p-[50px] bg-[#778899]  ">
-      <h1 className="text-xl md:text-4xl font-bold text-center">
-        {today} -- Tasks
+    <div className="w-full h-screen p-[10px] py-[50px] md:p-[50px] bg-[url('./assets/bg.png')] ">
+      <h1 className="flex justify-center items-center font-extrabold mt-4  text-[50px]  ">
+        Today's Tasks
       </h1>
 
-      {tasks.map((task, i) => {
+      <div className="mx-3 text-[18px]">{today}</div>
+
+      {data.map((task) => {
         return (
           <div
             key={task.id}
-            className="m-[10px] bg-[#303030] py-[5px] px-[20px] md:px-[30px]
+            className="m-[10px] bg-[#e6d8bc] py-[5px] px-[20px] md:px-[30px]
           md:py-[15px]  rounded-tr-[40px] rounded-bl-[40px] rounded-tl-[5px] rounded-br-[5px]  flex items-center gap-5  justify-between"
           >
             <div className="flex items-center gap-5">
               <div
                 className={`w-[15px] h-[15px] md:w-[30px] md:h-[30px]  rounded-full ${
-                  task.completed ? "bg-blue-700" : "bg-black"
+                  task.completed ? "bg-[#e4ae6d]" : "bg-black"
                 }`}
               ></div>
               <div
-                className={`md:text-[25px] text-white ${
+                className={`md:text-[30px] text-black ${
                   task.completed
-                    ? "line-through decoration-red-600 decoration-4"
+                    ? "line-through decoration-[#e4ae6d] decoration-4"
                     : ""
                 }`}
               >
@@ -82,8 +123,8 @@ function App() {
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
-                  stroke="white"
-                  className="w-6 h-6"
+                  stroke="black"
+                  className="w-6 h-6 "
                 >
                   <path
                     strokeLinecap="round"
@@ -94,7 +135,7 @@ function App() {
               </div>
               <div
                 onClick={() => {
-                  deleteTask(task.id);
+                  mutation.mutate(task.id);
                 }}
               >
                 <svg
@@ -102,7 +143,7 @@ function App() {
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
-                  stroke="white"
+                  stroke="black"
                   className="w-6 h-6"
                 >
                   <path
@@ -117,28 +158,20 @@ function App() {
         );
       })}
       <div
-        className="m-[10px] bg-[#303030] py-[5px] px-[20px] md:px-[30px]
+        className="m-[10px] bg-[#dfb583] py-[5px] px-[20px] md:px-[30px]
           md:py-[15px]  rounded-tr-[40px] rounded-bl-[40px] rounded-tl-[5px] rounded-br-[5px]  flex items-center gap-2  justify-center cursor-pointer"
         onClick={() => {
           setOpenModal(true);
         }}
       >
-        <div className={`text-4xl text-white `}>+</div>
-        <div className={`md:text-[25px] text-white `}>Add New Task</div>
+        <div className={`text-4xl text-black `}>+</div>
+        <div className={`md:text-[25px] text-black `}>Add New Task</div>
       </div>
-      <AddTask
-        openModal={openModal}
-        setOpenModal={setOpenModal}
-        setTasks={setTasks}
-        tasks={tasks}
-      ></AddTask>
+      <AddTask openModal={openModal} setOpenModal={setOpenModal}></AddTask>
       <EditTask
         editModal={editModal}
         setEditModal={setEditModal}
-        setTasks={setTasks}
-        tasks={tasks}
         Id={Id}
-        setId={setId}
       ></EditTask>
     </div>
   );
